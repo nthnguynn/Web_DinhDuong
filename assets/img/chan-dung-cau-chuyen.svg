@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 1080" width="860" height="1080" role="img" aria-label="Ảnh câu chuyện">
+<defs>
+  <linearGradient id="g" x1="0" y1="0" x2="0.4" y2="1">
+    <stop offset="0" stop-color="#F0D7D2"/><stop offset="1" stop-color="#C97B77"/>
+  </linearGradient>
+  <radialGradient id="glow" cx="0.5" cy="0.34" r="0.62">
+    <stop offset="0" stop-color="#FFF6EE" stop-opacity="0.55"/>
+    <stop offset="1" stop-color="#FFF6EE" stop-opacity="0"/>
+  </radialGradient>
+  <filter id="grain"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="3"/><feColorMatrix type="saturate" values="0"/><feComponentTransfer><feFuncA type="linear" slope="0.045"/></feComponentTransfer></filter>
+  <clipPath id="arch"><path d="M0 1080 L0 430 A 430 430 0 0 1 860 430 L860 1080 Z"/></clipPath>
+</defs>
+<g clip-path="url(#arch)">
+  <rect width="860" height="1080" fill="url(#g)"/>
+  <rect width="860" height="1080" fill="url(#glow)"/>
+  <g opacity="0.16" fill="none" stroke="#FFF6EE" stroke-width="1.5">
+    <circle cx="430" cy="430" r="140"/><circle cx="430" cy="430" r="218"/><circle cx="430" cy="430" r="296"/><circle cx="430" cy="430" r="374"/><circle cx="430" cy="430" r="452"/><circle cx="430" cy="430" r="530"/><circle cx="430" cy="430" r="608"/>
+  </g>
+  <path transform="translate(430 390) rotate(0) scale(3.4)" opacity="0.5" fill="#FFF6EE" d="M0 -12 C 5 -7 7 0 0 12 C -7 0 -5 -7 0 -12 Z"/>
+  <path transform="translate(334 476) rotate(-22) scale(2.1)" opacity="0.3" fill="#FFF6EE" d="M0 -12 C 5 -7 7 0 0 12 C -7 0 -5 -7 0 -12 Z"/>
+  <path transform="translate(526 476) rotate(22) scale(2.1)" opacity="0.3" fill="#FFF6EE" d="M0 -12 C 5 -7 7 0 0 12 C -7 0 -5 -7 0 -12 Z"/>
+  <text x="430" y="464" text-anchor="middle" font-family="Georgia, serif" font-size="120" font-style="italic" fill="#FFF6EE" opacity="0.92">N</text>
+  <text x="430" y="984" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="26" letter-spacing="6" fill="#FFF6EE" opacity="0.72">ẢNH CÂU CHUYỆN</text>
+  <rect width="860" height="1080" filter="url(#grain)"/>
+</g>
+<path d="M0 1080 L0 430 A 430 430 0 0 1 860 430 L860 1080 Z" fill="none" stroke="#FFF6EE" stroke-opacity="0.35" stroke-width="3"/>
+</svg>
