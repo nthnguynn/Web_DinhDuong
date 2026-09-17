@@ -1,21 +1,56 @@
-# Website Nguyễn Thị Nga — Dinh dưỡng & Sức khoẻ gia đình
+# Website Tạ Thị Nga — Dinh dưỡng & Sức khoẻ gia đình
 
-Website thương hiệu cá nhân, một trang (one-page), viết bằng HTML + CSS + JavaScript thuần.
-**Không cần cài đặt, không cần build, không phụ thuộc thư viện ngoài.** Mở `index.html` là chạy.
+Website thương hiệu cá nhân một trang, chạy bằng **Next.js 16 + Prisma 7 + PostgreSQL**.
+
+- **Popup giữ chỗ** tự hiện sau vài giây hoặc khi khách cuộn tới một đoạn trang, khách đóng thì một lúc sau lại hiện (tới khi khách đăng ký); bấm các nút "Đặt lịch trò chuyện / Nhận tư vấn miễn phí" cũng mở popup
+- Điền tên, số điện thoại, email → **lưu vào database** → **tự chuyển khách vào nhóm Zalo**
+- Trang **`/quan-tri`** (có mật khẩu): danh sách khách, lọc theo ngày đăng ký và trạng thái, ghi chú, tải file Excel; **cài đặt link nhóm Zalo và thời gian hiện popup**
+---
+
+## 1. Chạy trên máy
+
+Cần: Node.js 20+ và PostgreSQL (máy này đã có PostgreSQL 17, tài khoản `postgres/postgres`).
+
+```bash
+npm install
+cp .env.example .env        # rồi sửa DATABASE_URL, mật khẩu quản trị, link nhóm Zalo
+npx prisma migrate deploy   # tạo database + bảng (chạy 1 lần, hoặc sau khi thêm migration mới)
+npm run dev                 # mở http://localhost:3005
+```
+
+Nếu form báo **"Hệ thống đang bận"** → server không ghi được vào database. Kiểm tra:
+PostgreSQL có đang chạy không, `DATABASE_URL` trong `.env` đúng chưa, đã chạy `npx prisma migrate deploy` chưa.
+Lỗi chi tiết in ra ở terminal đang chạy `npm run dev`.
+
+### Biến môi trường (`.env`)
+
+| Biến | Ý nghĩa |
+|---|---|
+| `DATABASE_URL` | Chuỗi kết nối PostgreSQL |
+| `ADMIN_USER`, `ADMIN_PASSWORD` | Tài khoản vào `/quan-tri`. **Đặt mật khẩu mạnh trước khi đưa lên mạng.** Để trống = khoá hẳn trang quản trị |
+
+Link nhóm Zalo và thời gian popup **không** nằm ở đây, mà chỉnh trong `/quan-tri/cai-dat`.
+
+Sửa `.env` xong phải khởi động lại server (`npm run dev` hoặc `pm2 restart`).
 
 ---
 
-## 1. Chạy thử trên máy
+## 1b. Trang quản trị (CMS) — `/quan-tri`
 
-Cách nhanh nhất — nhấn đúp vào `index.html`.
+Vào `https://ten-mien/quan-tri`, trình duyệt hỏi tài khoản/mật khẩu (`ADMIN_USER` / `ADMIN_PASSWORD`).
 
-Nếu muốn giống môi trường thật (đường dẫn, font, form):
+**Danh sách khách** (`/quan-tri`)
+- Khách mới nhất ở trên, dòng **Mới** có vạch vàng bên trái; cột "Thời gian" ghi nguồn: **Popup giữ chỗ** hoặc **Form liên hệ**
+- **Lọc ngày đăng ký**: chọn Từ ngày / Đến ngày, hoặc bấm nhanh Hôm nay · Hôm qua · 7 ngày · 30 ngày · Tháng này (giờ Việt Nam)
+- Lọc theo trạng thái; đổi trạng thái (Mới → Đã liên hệ → Đã đăng ký / Huỷ), ghi chú, bấm **Lưu**
+- **Tải file Excel (CSV)** — xuất đúng những khách đang lọc, mở thẳng bằng Excel, đúng dấu tiếng Việt
 
-```bash
-cd /Users/thnguynn/ThNguyn.Dev/Web_DinhDuong
-npx http-server . -p 8899
-# rồi mở http://localhost:8899
-```
+**Cài đặt** (`/quan-tri/cai-dat`) — lưu xong áp dụng ngay:
+- **Link nhóm Zalo**: khách gửi form xong được chuyển vào nhóm này (trống = không chuyển)
+- **Popup tự hiện**: hiện lần đầu sau N giây **hoặc** khi khách cuộn tới N% trang (cái nào tới trước) · khách đóng thì N giây sau hiện lại · tối đa N lần mỗi lượt truy cập.
+  Mặc định 15 giây / cuộn 20% / 60 giây / 3 lần. Đặt cả "số giây" và "% trang" = 0 thì popup chỉ mở khi bấm nút.
+  Khách đã đăng ký thì popup thôi tự hiện; popup không chen ngang khi khách đang gõ form Liên hệ, xem ảnh hay mở menu.
+- Xem/sửa dữ liệu thô: `npm run db:studio`
 
 ---
 
@@ -23,18 +58,36 @@ npx http-server . -p 8899
 
 ```
 Web_DinhDuong/
-├── index.html              ← toàn bộ nội dung chữ nằm ở đây
-├── robots.txt
-├── sitemap.xml
-└── assets/
-    ├── css/
-    │   ├── styles.css      ← toàn bộ giao diện, hệ màu ở ngay đầu file
-    │   └── fonts.css       ← khai báo font (không cần sửa)
-    ├── js/
-    │   └── main.js         ← menu, hiệu ứng, slider, form
-    ├── fonts/              ← 21 file font tiếng Việt tải sẵn (261 KB)
-    └── img/                ← ảnh — đây là chỗ bạn cần thay
+├── app/
+│   ├── layout.tsx              ← thẻ <head>: tiêu đề, mô tả SEO, ảnh chia sẻ
+│   ├── page.tsx                ← TOÀN BỘ nội dung chữ của trang (trước đây là index.html)
+│   ├── api/lien-he/route.ts    ← nhận form, kiểm tra, lưu database, trả link Zalo
+│   ├── api/cau-hinh/route.ts   ← cho main.js biết thời gian tự hiện popup
+│   └── quan-tri/               ← CMS: danh sách khách, lọc ngày, xuất CSV, cai-dat/ (Zalo, popup)
+├── lib/
+│   ├── prisma.ts               ← kết nối database
+│   ├── lien-he.ts              ← luật kiểm tra form phía server, tên chủ đề
+│   ├── cai-dat.ts              ← đọc/ghi cài đặt (link Zalo, popup)
+│   └── loc-ngay.ts             ← lọc theo ngày (giờ Việt Nam)
+├── prisma/
+│   ├── schema.prisma           ← bảng lien_he (khách) và cai_dat (cài đặt)
+│   └── migrations/             ← lịch sử thay đổi database (phải đưa lên git)
+├── proxy.ts                    ← khoá /quan-tri bằng mật khẩu
+├── public/
+│   ├── robots.txt, sitemap.xml
+│   └── assets/
+│       ├── css/styles.css      ← toàn bộ giao diện, hệ màu ở đầu file (mục 21b = popup)
+│       ├── js/main.js          ← menu, hiệu ứng, slider, form, popup (mục 10–11)
+│       ├── fonts/
+│       └── img/                ← ảnh — đây là chỗ bạn cần thay
+└── .env                        ← mật khẩu, database (KHÔNG đưa lên git)
 ```
+
+Sửa chữ trong `app/page.tsx` giống sửa HTML, chỉ khác: `class` → `className`, `for` → `htmlFor`,
+chú thích viết `{/* ... */}`.
+
+**Popup:** chữ trong popup nằm cuối `app/page.tsx` (tìm `lead-modal`). Thời gian tự hiện chỉnh trong `/quan-tri/cai-dat`.
+Nút nào có thuộc tính `data-open-lead` thì bấm vào sẽ mở popup.
 
 ---
 
@@ -65,7 +118,7 @@ Muốn đổi màu: sửa các biến trong khối `:root` ở đầu [assets/cs
 ### 4.1 Thay ảnh thật ⚠️ quan trọng nhất
 
 Tất cả ảnh trong `assets/img/` đang là ảnh giả (SVG có chữ "Ảnh chân dung"…).
-Chép ảnh thật vào thư mục đó, đặt **đúng tên file**, rồi sửa đuôi `.svg` → `.jpg` trong `index.html`:
+Chép ảnh thật vào thư mục đó, đặt **đúng tên file**, rồi sửa đuôi `.svg` → `.jpg` trong `app/page.tsx`:
 
 | File cần thay | Dùng ở đâu | Kích thước nên dùng |
 |---|---|---|
@@ -77,12 +130,12 @@ Chép ảnh thật vào thư mục đó, đặt **đúng tên file**, rồi sử
 | `og-image.svg` | Ảnh hiện khi chia sẻ Facebook/Zalo | 1200 × 630 |
 | `favicon.svg` | Icon trên tab trình duyệt | 64 × 64 |
 
-Ví dụ trong `index.html`:
+Ví dụ trong `app/page.tsx`:
 ```html
 <!-- từ -->
-<img src="assets/img/chan-dung-hero.svg" alt="Chân dung Nguyễn Thị Nga" ... />
+<img src="/assets/img/chan-dung-hero.svg" alt="Chân dung Tạ Thị Nga" ... />
 <!-- thành -->
-<img src="assets/img/chan-dung-hero.jpg" alt="Chân dung Nguyễn Thị Nga" ... />
+<img src="/assets/img/chan-dung-hero.jpg" alt="Chân dung Tạ Thị Nga" ... />
 ```
 
 > Mẹo: nén ảnh bằng [squoosh.app](https://squoosh.app) xuống dưới 300 KB mỗi tấm,
@@ -90,33 +143,33 @@ Ví dụ trong `index.html`:
 
 ### 4.2 Thay thông tin liên hệ
 
-Tìm và thay trong `index.html` (dùng Ctrl+F / Cmd+F):
+Tìm và thay trong `app/page.tsx` (dùng Ctrl+F / Cmd+F):
 
-- `0900 000 000` → số điện thoại thật (đổi cả trong `tel:+84900000000` — bỏ số 0 đầu, thêm `+84`)
+- `0900 000 000` → số điện thoại thật (cả trong `public/assets/js/main.js`) (đổi cả trong `tel:+84900000000` — bỏ số 0 đầu, thêm `+84`)
 - `lienhe@ngadinhduong.com` → email thật
 - `https://zalo.me/` → link Zalo thật
 - `https://facebook.com/` → link Facebook thật
 - `https://youtube.com/`, `https://tiktok.com/` → link thật, **hoặc xoá hẳn thẻ `<a>` đó** nếu không dùng
-- `https://ngadinhduong.com/` → tên miền thật (có ở phần `<head>`, `robots.txt`, `sitemap.xml`)
+- `https://ngadinhduong.com` → tên miền thật (có ở `app/layout.tsx`, `public/robots.txt`, `public/sitemap.xml`)
 - `Hà Nội` → địa phương thật
 
 ### 4.3 Thay lời cảm nhận ⚠️ bắt buộc
 
 Bốn lời cảm nhận ở mục **Cảm nhận** là **nội dung mẫu do máy viết**, không phải người thật.
-Trong `index.html` có ghi chú `<!-- LƯU Ý ... -->` ngay trên khối đó.
+Trong `app/page.tsx` có ghi chú `{/* LƯU Ý ... */}` ngay trên khối đó.
 
 **Phải thay bằng cảm nhận thật và phải xin phép người viết trước khi đăng tên/ảnh họ.**
 Đăng cảm nhận bịa là vi phạm quy định quảng cáo và làm mất uy tín — đúng thứ mà cả
 trang này đang cố xây dựng.
 
 Nếu chưa kịp xin, cách an toàn: **xoá tạm cả mục Cảm nhận** — xoá đoạn từ
-`<section class="section testimonials" id="cam-nhan">` đến `</section>` tương ứng,
+`<section className="section testimonials" id="cam-nhan">` đến `</section>` tương ứng,
 và xoá dòng `<li><a href="#cam-nhan">Cảm nhận</a></li>` trong menu.
 
 ### 4.4 Kiểm tra lại các con số
 
 `24+ năm`, `1.200+ gia đình`, `86 buổi chia sẻ` là con số ước lượng.
-Sửa trong `index.html` ở thuộc tính `data-count`:
+Sửa trong `app/page.tsx` ở thuộc tính `data-count`:
 
 ```html
 <span class="count" data-count="1200">0</span>+
@@ -134,44 +187,70 @@ Chi tiết thật luôn cảm động hơn chi tiết hay.
 
 ---
 
-## 5. Làm cho form liên hệ gửi được thật
+## 5. Form lưu vào đâu?
 
-Hiện form đang ở **chế độ xem thử**: bấm gửi chỉ hiện thông báo, không gửi đi đâu cả.
+Cả popup và form ở mục Liên hệ đều gửi về `/api/lien-he` → lưu vào bảng `lien_he` trong PostgreSQL
+→ hiện ở `/quan-tri` → trình duyệt chuyển khách vào nhóm Zalo (link đặt ở `/quan-tri/cai-dat`).
 
-Cách nối trong 5 phút, không cần server (miễn phí):
+Chống spam có sẵn: ô bẫy bot ẩn, giới hạn 5 lần gửi / 10 phút mỗi IP, kiểm tra lại dữ liệu ở server.
 
-1. Vào [formspree.io](https://formspree.io) → đăng ký → tạo form mới → lấy link dạng
-   `https://formspree.io/f/xxxxxxx`
-2. Mở `index.html`, tìm `<form class="form" id="contact-form" action="#"` và thay:
-
-```html
-<form class="form" id="contact-form" action="https://formspree.io/f/xxxxxxx" method="post" novalidate>
-```
-
-Xong. Mọi tin nhắn sẽ về thẳng email đã đăng ký. JavaScript đã xử lý sẵn phần gửi,
-trạng thái "Đang gửi…", báo thành công và báo lỗi.
-
-Dịch vụ tương đương: [web3forms.com](https://web3forms.com), [getform.io](https://getform.io).
+Thêm cột mới cho form (ví dụ "Năm sinh"): sửa `prisma/schema.prisma` → chạy
+`npm run db:migrate` → thêm ô vào `app/page.tsx` và luật vào `lib/lien-he.ts`.
 
 ---
 
-## 6. Đưa website lên mạng
+## 6. Đưa lên server (VPS Ubuntu)
 
-### Cách 1 — Netlify (dễ nhất, miễn phí)
-1. Vào [app.netlify.com/drop](https://app.netlify.com/drop)
-2. Kéo **cả thư mục `Web_DinhDuong`** thả vào trang
-3. Xong — có link ngay. Muốn gắn tên miền riêng: *Site settings → Domain management*
+Trang **cần Node.js và PostgreSQL** chạy liên tục — không dùng được Netlify Drop, GitHub Pages hay hosting cPanel chỉ có PHP.
 
-### Cách 2 — Vercel
 ```bash
-npx vercel --prod
+# 1. Cài một lần trên server
+sudo apt install -y postgresql nginx
+curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash - && sudo apt install -y nodejs
+sudo npm i -g pm2
+sudo -u postgres psql -c "CREATE USER nga WITH PASSWORD 'mat-khau-manh';"
+sudo -u postgres psql -c "CREATE DATABASE dinhduong OWNER nga;"
+
+# 2. Lấy code
+git clone <link-repo> /var/www/dinhduong && cd /var/www/dinhduong
+cp .env.example .env && nano .env
+#   DATABASE_URL="postgresql://nga:mat-khau-manh@localhost:5432/dinhduong?schema=public"
+#   ADMIN_PASSWORD = mật khẩu mạnh (link Zalo nhập sau trong /quan-tri/cai-dat)
+
+# 3. Build & chạy
+npm ci
+npx prisma migrate deploy
+npm run build
+pm2 start npm --name dinhduong -- start      # chạy ở cổng 3005
+pm2 save && pm2 startup
 ```
 
-### Cách 3 — GitHub Pages
-Đẩy code lên GitHub → *Settings → Pages → Branch: main / (root)*
+Nginx trỏ tên miền về cổng 3005 (`/etc/nginx/sites-available/dinhduong`):
 
-### Cách 4 — Hosting Việt Nam (cPanel)
-Dùng File Manager, tải toàn bộ thư mục lên `public_html/`. Không cần PHP, không cần database.
+```nginx
+server {
+  server_name ngadinhduong.com www.ngadinhduong.com;
+  location / {
+    proxy_pass http://127.0.0.1:3005;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+  }
+}
+```
+
+Bật HTTPS: `sudo certbot --nginx -d ngadinhduong.com -d www.ngadinhduong.com`
+(bắt buộc — trang quản trị gửi mật khẩu, không có HTTPS là lộ).
+
+**Cập nhật code về sau:**
+
+```bash
+cd /var/www/dinhduong && git pull && npm ci && npx prisma migrate deploy && npm run build && pm2 restart dinhduong
+```
+
+Muốn dùng Vercel thay VPS: tạo database PostgreSQL online (Neon, Supabase, Prisma Postgres),
+đặt 4 biến môi trường trong Vercel, build command giữ nguyên `npm run build`, và chạy
+`npx prisma migrate deploy` với `DATABASE_URL` của database đó.
 
 ---
 
@@ -203,5 +282,5 @@ người dùng vuốt rất nhanh hoặc mở trang bằng link `#neo`.
 
 - Trang blog riêng cho từng bài — hiện 3 bài ở mục "Chia sẻ" chỉ là thẻ giới thiệu,
   bấm vào chưa đi đâu. Cần thì tạo thêm `bai-viet/ten-bai.html`.
-- Trang "Chính sách bảo mật" — **nên có** nếu form thu số điện thoại và bạn chạy quảng cáo Facebook.
+- Trang "Chính sách bảo mật" — **nên có**: form đang thu tên, số điện thoại, email và lưu lại.
 - Đa ngôn ngữ, đặt lịch tự động, thanh toán trực tuyến.

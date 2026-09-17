@@ -1,5 +1,5 @@
 /* ============================================================================
-   NGUYỄN THỊ NGA — main.js
+   TẠ THỊ NGA — main.js
    Không dùng thư viện ngoài. Tất cả tương tác đều tôn trọng
    prefers-reduced-motion và hoạt động được bằng bàn phím.
    ========================================================================== */
@@ -333,24 +333,35 @@
     });
   }
 
-  /* ------------------------------------------------- 10. Form liên hệ ---- */
-  var form = $('#contact-form');
-  if (form) {
-    var status = $('#form-status');
+  /* ------------------------------------------------- 10. Form (dùng chung) */
+  // Cả form Liên hệ và form trong popup đều gửi về /api/lien-he (lưu vào database).
+  var PHONE_RE = /^(\+?84|0)\d{8,10}$/;
+  var EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+  var ZALO_TEXT = 'Gửi chưa được. Bạn nhắn Zalo 0900 000 000 giúp tôi nhé.';
 
-    var RULES = {
-      'ten': function (v) { return v.trim().length >= 2 || 'Bạn cho tôi biết tên gọi nhé.'; },
-      'sdt': function (v) {
-        var digits = v.replace(/[^\d+]/g, '');
-        return /^(\+?84|0)\d{8,10}$/.test(digits) || 'Số điện thoại chưa đúng định dạng.';
-      },
-      'email': function (v) {
-        if (!v.trim()) return true; // không bắt buộc
-        return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v.trim()) || 'Email chưa đúng định dạng.';
-      },
-      'loi-nhan': function (v) { return v.trim().length >= 10 || 'Viết giúp tôi vài dòng (ít nhất 10 ký tự).'; },
-      'dong-y': function (_, el) { return el.checked || 'Bạn cần đồng ý để tôi có thể liên hệ lại.'; }
-    };
+  var RULE = {
+    ten: function (v) { return v.trim().length >= 2 || 'Bạn cho tôi biết tên gọi nhé.'; },
+    sdt: function (v) { return PHONE_RE.test(v.replace(/[^\d+]/g, '')) || 'Số điện thoại chưa đúng định dạng.'; },
+    emailOptional: function (v) {
+      if (!v.trim()) return true;
+      return EMAIL_RE.test(v.trim()) || 'Email chưa đúng định dạng.';
+    },
+    emailRequired: function (v) {
+      if (!v.trim()) return 'Bạn điền email giúp tôi nhé.';
+      return EMAIL_RE.test(v.trim()) || 'Email chưa đúng định dạng.';
+    },
+    loiNhan: function (v) { return v.trim().length >= 10 || 'Viết giúp tôi vài dòng (ít nhất 10 ký tự).'; },
+    dongY: function (_, el) { return el.checked || 'Bạn cần đồng ý để tôi có thể liên hệ lại.'; }
+  };
+
+  function setupForm(form, rules, onSuccess) {
+    var status = $('.form__status', form);
+
+    function setStatus(text, kind) {
+      if (!status) return;
+      status.textContent = text;
+      status.className = 'form__status' + (kind ? ' is-' + kind : '');
+    }
 
     function setError(name, message) {
       var el = form.elements[name];
@@ -367,12 +378,12 @@
     function validateField(name) {
       var el = form.elements[name];
       if (!el) return true;
-      var result = RULES[name](el.value || '', el);
+      var result = rules[name](el.value || '', el);
       setError(name, result === true ? '' : result);
       return result === true;
     }
 
-    Object.keys(RULES).forEach(function (name) {
+    Object.keys(rules).forEach(function (name) {
       var el = form.elements[name];
       if (!el) return;
       el.addEventListener('blur', function () { validateField(name); });
@@ -384,11 +395,11 @@
 
     form.addEventListener('submit', function (e) {
       e.preventDefault();
-      if (status) { status.textContent = ''; status.className = 'form__status'; }
+      setStatus('');
 
       var ok = true;
       var firstBad = null;
-      Object.keys(RULES).forEach(function (name) {
+      Object.keys(rules).forEach(function (name) {
         var valid = validateField(name);
         if (!valid && !firstBad) firstBad = form.elements[name];
         ok = ok && valid;
@@ -396,51 +407,220 @@
 
       if (!ok) {
         if (firstBad && firstBad.focus) firstBad.focus();
-        if (status) {
-          status.textContent = 'Còn vài ô cần bạn xem lại giúp tôi.';
-          status.className = 'form__status is-err';
-        }
+        setStatus('Còn vài ô cần bạn xem lại giúp tôi.', 'err');
         return;
       }
 
-      var action = form.getAttribute('action');
       var btn = $('button[type="submit"]', form);
-
-      // Chưa cấu hình endpoint → chỉ báo thành công tại chỗ (chế độ xem thử).
-      if (!action || action === '#') {
-        if (status) {
-          status.textContent = 'Cảm ơn bạn! (Form đang ở chế độ xem thử — xem README.md để nối tới email thật.)';
-          status.className = 'form__status is-ok';
-        }
-        form.reset();
-        return;
-      }
-
       if (btn) { btn.disabled = true; btn.style.opacity = '0.7'; }
-      if (status) { status.textContent = 'Đang gửi...'; status.className = 'form__status'; }
+      setStatus('Đang gửi...');
 
-      fetch(action, {
+      fetch(form.getAttribute('action'), {
         method: 'POST',
         body: new FormData(form),
         headers: { Accept: 'application/json' }
       })
         .then(function (res) {
-          if (!res.ok) throw new Error('HTTP ' + res.status);
-          if (status) {
-            status.textContent = 'Đã gửi! Tôi sẽ trả lời bạn trong vòng 24 giờ.';
-            status.className = 'form__status is-ok';
-          }
-          form.reset();
+          return res.json().catch(function () { return {}; }).then(function (data) {
+            if (res.ok && data.ok) {
+              form.reset();
+              setStatus('Đã gửi! Tôi sẽ trả lời bạn trong vòng 24 giờ.', 'ok');
+              if (onSuccess) onSuccess(data);
+              return;
+            }
+            // Server báo lỗi từng ô → hiện đúng chỗ
+            if (data.errors) Object.keys(data.errors).forEach(function (name) { setError(name, data.errors[name]); });
+            setStatus(data.message || ZALO_TEXT, 'err');
+          });
         })
-        .catch(function () {
-          if (status) {
-            status.textContent = 'Gửi chưa được. Bạn nhắn Zalo 0900 000 000 giúp tôi nhé.';
-            status.className = 'form__status is-err';
-          }
-        })
+        .catch(function () { setStatus(ZALO_TEXT, 'err'); })
         .finally(function () {
           if (btn) { btn.disabled = false; btn.style.opacity = ''; }
         });
     });
+  }
+
+  // Gửi thành công → chuyển khách vào nhóm Zalo (link ZALO_GROUP_URL trong .env).
+  // Mở ngay trong tab hiện tại: trên điện thoại link zalo.me/g/... sẽ bật app Zalo.
+  var ZALO_REDIRECT_MS = 1800;
+  function goToZalo(url) {
+    if (!url) return false;
+    setTimeout(function () { window.location.href = url; }, ZALO_REDIRECT_MS);
+    return true;
+  }
+
+  var contactForm = $('#contact-form');
+  if (contactForm) {
+    setupForm(contactForm, {
+      'ten': RULE.ten,
+      'sdt': RULE.sdt,
+      'email': RULE.emailOptional,
+      'loi-nhan': RULE.loiNhan,
+      'dong-y': RULE.dongY
+    }, function (data) {
+      markLeadSent();
+      if (goToZalo(data.redirect)) {
+        var st = $('.form__status', contactForm);
+        if (st) st.textContent = 'Đã gửi! Đang chuyển bạn vào nhóm Zalo...';
+      }
+    });
+  }
+
+  /* ------------------------------------------------- 11. Popup giữ chỗ ---- */
+  // Mở khi khách bấm nút có data-open-lead, và TỰ HIỆN định kỳ theo cài đặt trong
+  // /quan-tri/cai-dat (lấy qua /api/cau-hinh):
+  //   popupBatSau — hiện lần đầu sau N giây (0 = không hiện theo thời gian)
+  //   popupCuon   — hoặc hiện khi khách cuộn tới N% trang (0 = tắt); cái nào tới trước thì hiện
+  //   popupLapLai — khách đóng thì N giây sau hiện lại (0 = không hiện lại)
+  //   popupToiDa  — tự hiện tối đa N lần mỗi lượt truy cập (0 = không giới hạn)
+  // Khách đã gửi form (popup hoặc Liên hệ) thì không tự hiện nữa.
+  var leadModal = $('#lead-modal');
+  var leadSent = false;
+
+  function markLeadSent() {
+    leadSent = true;
+    writeStore('localStorage', 'lead-sent', '1');
+  }
+
+  // sessionStorage/localStorage có thể bị chặn (ẩn danh) → không được làm hỏng popup.
+  function readStore(kind, key) {
+    try { return window[kind].getItem(key); } catch (err) { return null; }
+  }
+  function writeStore(kind, key, value) {
+    try { window[kind].setItem(key, value); } catch (err) { /* bỏ qua */ }
+  }
+
+  if (leadModal) {
+    var leadBody = $('#lead-body');
+    var leadDone = $('#lead-done');
+    var leadForm = $('#lead-form');
+    var leadLastFocus = null;
+    var AUTO = { popupBatSau: 0, popupLapLai: 0, popupToiDa: 0, popupCuon: 0 };
+    var autoTimer = null;
+    var autoCount = Number(readStore('sessionStorage', 'lead-auto-count')) || 0;
+    var autoShownThisPage = false;
+    leadSent = leadSent || readStore('localStorage', 'lead-sent') === '1';
+
+    var autoAllowed = function () {
+      if (leadSent || !(AUTO.popupBatSau > 0 || AUTO.popupCuon > 0)) return false;
+      return !AUTO.popupToiDa || autoCount < AUTO.popupToiDa;
+    };
+
+    // Tự mở nếu được phép. Trả về false khi khách đang bận (để thử lại sau).
+    var tryAutoOpen = function () {
+      if (!leadModal.hidden || !autoAllowed()) return true;
+      // Không chen ngang khi khách đang xem ảnh, mở menu hoặc đang gõ form Liên hệ
+      var busy = (lightbox && !lightbox.hidden) ||
+        document.body.classList.contains('nav-open') ||
+        (contactForm && contactForm.contains(document.activeElement));
+      if (busy) return false;
+      autoCount++;
+      autoShownThisPage = true;
+      writeStore('sessionStorage', 'lead-auto-count', String(autoCount));
+      openLead();
+      return true;
+    };
+
+    var scheduleAuto = function (seconds) {
+      clearTimeout(autoTimer);
+      if (!seconds || !autoAllowed()) return;
+      autoTimer = setTimeout(function () {
+        if (!tryAutoOpen()) scheduleAuto(10);
+      }, seconds * 1000);
+    };
+
+    // Lần hiện đầu tiên theo độ cuộn trang (các lần sau do popupLapLai quyết định)
+    var onScrollLead = function () {
+      if (autoShownThisPage || !AUTO.popupCuon) return;
+      var doc = document.documentElement;
+      var max = doc.scrollHeight - window.innerHeight;
+      var percent = max > 0 ? ((window.scrollY || doc.scrollTop) / max) * 100 : 0;
+      if (percent >= AUTO.popupCuon && tryAutoOpen()) {
+        window.removeEventListener('scroll', onScrollLead);
+      }
+    };
+
+    var openLead = function () {
+      if (!leadModal.hidden) return;
+      closeNav();
+      leadLastFocus = document.activeElement;
+      leadModal.hidden = false;
+      document.body.style.overflow = 'hidden';
+      clearTimeout(autoTimer);
+      window.requestAnimationFrame(function () { leadModal.classList.add('is-open'); });
+      var first = $('input:not([type="hidden"]):not([tabindex="-1"])', leadBody || leadModal);
+      if (first) first.focus({ preventScroll: true });
+    };
+
+    var closeLead = function () {
+      if (leadModal.hidden) return;
+      leadModal.classList.remove('is-open');
+      document.body.style.overflow = '';
+      var done = function () {
+        leadModal.hidden = true;
+        // Lần mở sau lại thấy form (khách có thể đăng ký thêm cho người thân)
+        if (leadBody && leadDone && !leadDone.hidden) { leadDone.hidden = true; leadBody.hidden = false; }
+      };
+      if (reduceMotion) done(); else setTimeout(done, 320);
+      if (leadLastFocus && leadLastFocus.focus) leadLastFocus.focus();
+      scheduleAuto(AUTO.popupLapLai);
+    };
+
+    $$('[data-open-lead]').forEach(function (btn) {
+      btn.addEventListener('click', function (e) { e.preventDefault(); openLead(); });
+    });
+    $$('[data-lead-close]', leadModal).forEach(function (btn) { btn.addEventListener('click', closeLead); });
+    leadModal.addEventListener('click', function (e) { if (e.target === leadModal) closeLead(); });
+
+    document.addEventListener('keydown', function (e) {
+      if (leadModal.hidden) return;
+      if (e.key === 'Escape') { closeLead(); return; }
+      if (e.key !== 'Tab') return;
+      // Giữ phím Tab chạy vòng bên trong popup
+      var focusables = $$('a[href], button:not([disabled]), input:not([type="hidden"]):not([tabindex="-1"]), select, textarea', leadModal)
+        .filter(function (el) { return el.offsetParent !== null; });
+      if (!focusables.length) return;
+      var firstEl = focusables[0];
+      var lastEl = focusables[focusables.length - 1];
+      if (e.shiftKey && document.activeElement === firstEl) { e.preventDefault(); lastEl.focus(); }
+      else if (!e.shiftKey && document.activeElement === lastEl) { e.preventDefault(); firstEl.focus(); }
+    });
+
+    if (leadForm) {
+      setupForm(leadForm, { ten: RULE.ten, sdt: RULE.sdt, email: RULE.emailRequired }, function (data) {
+        markLeadSent();
+        if (leadBody && leadDone) {
+          leadBody.hidden = true;
+          leadDone.hidden = false;
+          var zalo = $('#lead-zalo');
+          var doneText = $('#lead-done-text');
+          if (data.redirect) {
+            // Nút dự phòng nếu trình duyệt (vd. trong app Facebook) chặn chuyển trang
+            if (zalo) {
+              zalo.href = data.redirect;
+              zalo.removeAttribute('target');
+              zalo.textContent = 'Vào nhóm Zalo ngay';
+            }
+            if (doneText) doneText.textContent = 'Đang chuyển bạn vào nhóm Zalo của cô Nga... Nếu chưa tự chuyển, bấm nút bên dưới nhé.';
+            goToZalo(data.redirect);
+          }
+          if (zalo) zalo.focus();
+        }
+      });
+    }
+
+    if (!leadSent && window.fetch) {
+      fetch('/api/cau-hinh', { headers: { Accept: 'application/json' } })
+        .then(function (res) { return res.json(); })
+        .then(function (cfg) {
+          AUTO = cfg;
+          scheduleAuto(AUTO.popupBatSau);
+          if (AUTO.popupCuon > 0) {
+            window.addEventListener('scroll', onScrollLead, { passive: true });
+            onScrollLead(); // mở bằng link #neo có thể đã ở giữa trang
+          }
+        })
+        .catch(function () { /* không đọc được cài đặt → chỉ mở khi bấm nút */ });
+    }
   }
 })();

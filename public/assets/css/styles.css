@@ -1,5 +1,5 @@
 /* ============================================================================
-   NGUYỄN THỊ NGA — Website thương hiệu cá nhân
+   TẠ THỊ NGA — Website thương hiệu cá nhân
    ----------------------------------------------------------------------------
    HỆ MÀU "LÚA & SEN" — mỗi màu gắn với một phần trong câu chuyện:
 
@@ -1364,6 +1364,116 @@ h1, h2, h3, h4 {
 }
 .lightbox__close:hover { background: var(--cream-100); color: var(--jade-900); }
 
+/* --------------------------------------------------------------- 21b. POPUP GIỮ CHỖ */
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+/* Ô bẫy bot — người thật không nhìn thấy */
+.hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+
+.lead-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: grid;
+  place-items: center;
+  padding: clamp(0.75rem, 3vw, 2rem);
+  background: rgba(18, 49, 42, 0.62);
+  backdrop-filter: blur(3px);
+  overflow-y: auto;
+  opacity: 0;
+  transition: opacity 0.3s var(--ease);
+}
+.lead-modal[hidden] { display: none; }
+.lead-modal.is-open { opacity: 1; }
+
+.lead-modal__box {
+  position: relative;
+  width: min(100%, 540px);
+  margin-block: auto;
+  background: var(--paper);
+  border-radius: var(--r-md);
+  border-top: 5px solid var(--gold-500);
+  box-shadow: var(--shadow-lg);
+  padding: clamp(1.4rem, 1rem + 2vw, 2.4rem);
+  text-align: center;
+  transform: translateY(18px) scale(0.98);
+  transition: transform 0.35s var(--ease);
+}
+.lead-modal.is-open .lead-modal__box { transform: none; }
+
+.lead-modal__close {
+  position: absolute;
+  top: -14px; right: -14px;
+  width: 38px; height: 38px;
+  display: grid; place-items: center;
+  border-radius: 50%;
+  background: var(--jade-900);
+  color: var(--cream-100);
+  border: 2px solid var(--paper);
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  transition: background 0.25s var(--ease), transform 0.25s var(--ease);
+}
+.lead-modal__close:hover { background: var(--lotus-600); transform: rotate(90deg); }
+@media (max-width: 560px) { .lead-modal__close { top: 8px; right: 8px; } }
+
+.lead-modal__kicker {
+  display: inline-block;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--jade-600);
+  background: var(--jade-050);
+  padding: 0.3rem 0.85rem;
+  border-radius: var(--r-pill);
+}
+.lead-modal__kicker strong { color: var(--gold-700); }
+
+.lead-modal__title {
+  margin-top: 0.8rem;
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 1.15rem + 1.6vw, 2.15rem);
+  line-height: 1.2;
+  color: var(--jade-900);
+}
+.lead-modal__title em { color: var(--gold-600); }
+
+.lead-modal__media {
+  margin: 1.1rem auto 0;
+  width: min(100%, 220px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 4px solid var(--gold-200);
+}
+.lead-modal__media img { width: 100%; height: 100%; object-fit: cover; object-position: top; }
+@media (max-height: 720px) { .lead-modal__media { display: none; } }
+
+.lead-modal__lead {
+  margin: 1rem auto 1.2rem;
+  max-width: 42ch;
+  font-size: var(--fs-sm);
+  color: var(--text-soft);
+}
+
+.lead-form { gap: 0.8rem; text-align: left; }
+.lead-form .field { gap: 0.25rem; }
+.lead-form__submit { margin-top: 0.3rem; font-size: 1rem; }
+
+.lead-modal__done { padding-block: 1rem; }
+.lead-modal__done[hidden] { display: none; }
+.lead-modal__tick {
+  display: grid; place-items: center;
+  width: 64px; height: 64px;
+  margin: 0 auto;
+  border-radius: 50%;
+  background: var(--jade-600);
+  color: var(--cream-100);
+}
+
 /* --------------------------------------------------------------- 22. REVEAL */
 [data-reveal] {
   opacity: 0;
@@ -1386,7 +1496,7 @@ h1, h2, h3, h4 {
 
 /* --------------------------------------------------------------- 23. PRINT */
 @media print {
-  .site-header, .floating, .lightbox, .ticker, .hero__bg { display: none !important; }
+  .site-header, .floating, .lightbox, .lead-modal, .ticker, .hero__bg { display: none !important; }
   body { background: #fff; color: #000; }
   .section { padding-block: 1.5rem; page-break-inside: avoid; }
   [data-reveal] { opacity: 1 !important; transform: none !important; }

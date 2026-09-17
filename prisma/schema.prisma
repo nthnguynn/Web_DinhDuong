@@ -1,0 +1,57 @@
+// Schema cơ sở dữ liệu. Sửa xong chạy: npm run db:migrate
+
+generator client {
+  provider = "prisma-client"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+/// Mỗi lần khách điền form (popup giữ chỗ hoặc form liên hệ) là một dòng.
+model LienHe {
+  id        Int         @id @default(autoincrement())
+  ten       String
+  sdt       String
+  email     String?
+  chuDe     String?     @map("chu_de")
+  loiNhan   String?     @map("loi_nhan")
+  /// "popup" = form bật lên, "lien-he" = form ở mục Liên hệ
+  nguon     String      @default("lien-he")
+  trangThai TrangThai   @default(MOI) @map("trang_thai")
+  ghiChu    String?     @map("ghi_chu")
+  ip        String?
+  userAgent String?     @map("user_agent")
+  createdAt DateTime    @default(now()) @map("created_at")
+  updatedAt DateTime    @updatedAt @map("updated_at")
+
+  @@index([createdAt])
+  @@index([trangThai])
+  @@map("lien_he")
+}
+
+enum TrangThai {
+  MOI        // mới, chưa gọi
+  DA_LIEN_HE // đã gọi / nhắn
+  DA_CHOT    // đã đăng ký
+  HUY        // không phù hợp / spam
+}
+
+/// Cài đặt chỉnh trong /quan-tri/cai-dat — chỉ có 1 dòng (id = 1).
+model CaiDat {
+  id           Int      @id @default(1)
+  /// Link mời vào nhóm Zalo. Trống = không chuyển khách sau khi gửi form.
+  zaloGroupUrl String?  @map("zalo_group_url")
+  /// Popup tự hiện lần đầu sau bao nhiêu giây. 0 = không tự hiện (chỉ mở khi bấm nút).
+  popupBatSau  Int      @default(15) @map("popup_bat_sau")
+  /// Khách đóng popup thì bao nhiêu giây sau hiện lại.
+  popupLapLai  Int      @default(60) @map("popup_lap_lai")
+  /// Tự hiện tối đa bao nhiêu lần mỗi lượt truy cập. 0 = không giới hạn.
+  popupToiDa   Int      @default(3) @map("popup_toi_da")
+  /// Hiện khi khách cuộn tới bao nhiêu % trang (tính cả thời gian, cái nào tới trước). 0 = tắt.
+  popupCuon    Int      @default(20) @map("popup_cuon")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@map("cai_dat")
+}
